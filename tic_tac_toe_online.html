@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe Online & Local</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .cell-hover:hover:not(:disabled) {
+            transform: scale(0.97);
+        }
+        .cell-pop {
+            animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .glow-x {
+            filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.5));
+        }
+        .glow-o {
+            filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.5));
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 selection:bg-indigo-500 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="w-full max-w-md flex items-center justify-between py-4 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-extrabold text-xl shadow-lg shadow-indigo-500/30">
+                #
+            </div>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                TicTacToe<span class="text-indigo-400 font-extrabold">.io</span>
+            </h1>
+        </div>
+        <button id="soundToggleBtn" class="p-2 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white transition">
+            <i data-lucide="volume-2" class="w-5 h-5"></i>
+        </button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="w-full max-w-md my-auto flex flex-col items-center gap-6 py-6">
+
+        <!-- Mode Selection / Room Controls Card -->
+        <div class="w-full bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl rounded-2xl p-4 shadow-xl flex flex-col gap-3">
+            <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800/60">
+                <button id="modeLocalBtn" class="flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 bg-indigo-600 text-white shadow-md">
+                    <i data-lucide="users" class="w-4 h-4"></i> Pass & Play
+                </button>
+                <button id="modeOnlineBtn" class="flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200">
+                    <i data-lucide="globe" class="w-4 h-4"></i> Online Friend
+                </button>
+            </div>
+
+            <!-- Online Controls Panel (Hidden by default) -->
+            <div id="onlinePanel" class="hidden flex-col gap-3 pt-2">
+                <div class="flex gap-2">
+                    <button id="createRoomBtn" class="flex-1 py-2.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-medium rounded-xl text-sm transition flex items-center justify-center gap-2">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> Create Room
+                    </button>
+                    <div class="flex-1 flex gap-1">
+                        <input type="text" id="roomCodeInput" placeholder="Room Code" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 text-sm font-mono uppercase tracking-wider text-center focus:outline-none focus:border-indigo-500 text-white placeholder-slate-600">
+                        <button id="joinRoomBtn" class="px-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-semibold transition">
+                            Join
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Online Room Info Bar -->
+                <div id="roomStatusInfo" class="hidden flex items-center justify-between bg-slate-950/80 rounded-xl p-3 border border-indigo-900/50">
+                    <div class="flex flex-col">
+                        <span class="text-xs text-slate-400 font-medium">Room Code: <strong id="currentRoomCodeDisplay" class="text-indigo-400 font-mono font-bold tracking-wider">------</strong></span>
+                        <span id="playerRoleStatus" class="text-xs text-emerald-400 font-medium mt-0.5">Connecting...</span>
+                    </div>
+                    <button id="copyShareLinkBtn" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i> Share Link
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scoreboard -->
+        <div class="w-full grid grid-cols-3 gap-3">
+            <div id="scoreBoxX" class="bg-slate-900/90 border-2 border-red-500/30 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300">
+                <div class="text-red-400 font-black text-xl flex items-center gap-1">
+                    <i data-lucide="x" class="w-5 h-5 stroke-[3]"></i> X
+                </div>
+                <div id="labelPlayerX" class="text-[11px] font-semibold text-slate-400 truncate max-w-full">Player 1</div>
+                <div id="scoreX" class="text-2xl font-black text-slate-100 mt-1">0</div>
+            </div>
+
+            <div id="scoreBoxTie" class="bg-slate-900/90 border-2 border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center transition-all duration-300">
+                <div class="text-slate-400 font-bold text-sm">TIES</div>
+                <div class="text-[11px] font-semibold text-slate-500">Draws</div>
+                <div id="scoreTie" class="text-2xl font-black text-slate-100 mt-1">0</div>
+            </div>
+
+            <div id="scoreBoxO" class="bg-slate-900/90 border-2 border-blue-500/30 rounded-2xl p-3 flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300">
+                <div class="text-blue-400 font-black text-xl flex items-center gap-1">
+                    <i data-lucide="circle" class="w-5 h-5 stroke-[3]"></i> O
+                </div>
+                <div id="labelPlayerO" class="text-[11px] font-semibold text-slate-400 truncate max-w-full">Player 2</div>
+                <div id="scoreO" class="text-2xl font-black text-slate-100 mt-1">0</div>
+            </div>
+        </div>
+
+        <!-- Turn / Status Indicator Banner -->
+        <div id="statusBanner" class="w-full bg-slate-900/60 border border-slate-800 rounded-xl py-2.5 px-4 flex items-center justify-center gap-2 text-sm font-bold text-slate-300 shadow-inner">
+            <span id="turnText" class="flex items-center gap-2">It's <span class="text-red-400 font-extrabold flex items-center gap-1"><i data-lucide="x" class="w-4 h-4"></i> X</span>'s turn</span>
+        </div>
+
+        <!-- Game Board Box -->
+        <div class="relative w-full aspect-square bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-2xl flex items-center justify-center overflow-hidden">
+            <!-- 3x3 Grid Container -->
+            <div id="board" class="w-full h-full grid grid-cols-3 grid-rows-3 gap-3 relative">
+                <!-- 9 Grid Buttons generated dynamically or static with data-index -->
+                <!-- Index 0 -->
+                <button data-index="0" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="1" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="2" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="3" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="4" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="5" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="6" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="7" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+                <button data-index="8" class="cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none"></button>
+            </div>
+        </div>
+
+        <!-- Control Action Buttons -->
+        <div class="w-full flex gap-3">
+            <button id="restartBtn" class="flex-1 py-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 font-bold rounded-2xl text-sm transition flex items-center justify-center gap-2 shadow-lg active:scale-95">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i> New Game
+            </button>
+            <button id="resetScoreBtn" class="py-3 px-4 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-red-400 font-bold rounded-2xl text-sm transition flex items-center justify-center gap-2 active:scale-95" title="Reset Scores">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-2.5 rounded-full text-xs font-semibold shadow-2xl opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2 border border-indigo-400/40">
+        <i data-lucide="info" class="w-4 h-4"></i> <span id="toastMsg">Notification message</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-md text-center py-4 text-xs text-slate-600 border-t border-slate-900">
+        Real-time Multiplayer &bull; Built with HTML, Tailwind & Firebase
+    </footer>
+
+    <!-- Firebase JS SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables & Config
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'tictactoe-default-app';
+        let firebaseConfig = null;
+        if (typeof __firebase_config !== 'undefined') {
+            try { firebaseConfig = JSON.parse(__firebase_config); } catch(e) { console.error("Invalid Firebase config", e); }
+        }
+
+        let app = null, auth = null, db = null, currentUser = null;
+        let onlineActive = false;
+        let activeRoomId = null;
+        let roomUnsubscribe = null;
+        let myRole = 'X'; // Default host is X
+
+        // Web Audio Synthesizer for SFX
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let soundEnabled = true;
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+            if (type === 'move') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(580, now + 0.08);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.start(now);
+                osc.stop(now + 0.08);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554.37, now + 0.1);
+                osc.frequency.setValueAtTime(659.25, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'tie') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(250, now);
+                osc.frequency.linearRampToValueAtTime(150, now + 0.25);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        async function initFirebase() {
+            if (!firebaseConfig) return;
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        // Check if URL has a room query param to auto-join
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const roomFromUrl = urlParams.get('room');
+                        if (roomFromUrl) {
+                            switchMode('online');
+                            document.getElementById('roomCodeInput').value = roomFromUrl;
+                            joinRoom(roomFromUrl.toUpperCase());
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Firebase auth error:", err);
+            }
+        }
+
+        initFirebase();
+
+        let boardState = Array(9).fill(null);
+        let turn = 'X'; // 'X' or 'O'
+        let gameOver = false;
+        let scoreX = 0;
+        let scoreO = 0;
+        let scoreTie = 0;
+
+        const winningCombinations = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        const cells = document.querySelectorAll('.cell');
+        const turnText = document.getElementById('turnText');
+        const modeLocalBtn = document.getElementById('modeLocalBtn');
+        const modeOnlineBtn = document.getElementById('modeOnlineBtn');
+        const onlinePanel = document.getElementById('onlinePanel');
+        const createRoomBtn = document.getElementById('createRoomBtn');
+        const joinRoomBtn = document.getElementById('joinRoomBtn');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const roomStatusInfo = document.getElementById('roomStatusInfo');
+        const currentRoomCodeDisplay = document.getElementById('currentRoomCodeDisplay');
+        const playerRoleStatus = document.getElementById('playerRoleStatus');
+        const copyShareLinkBtn = document.getElementById('copyShareLinkBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const resetScoreBtn = document.getElementById('resetScoreBtn');
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+
+        // Render Icons
+        lucide.createIcons();
+
+        // Attach Cell Click Handler
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                const idx = parseInt(cell.getAttribute('data-index'));
+                handleCellClick(idx);
+            });
+        });
+
+        function handleCellClick(index) {
+            if (gameOver || boardState[index]) return;
+
+            if (onlineActive) {
+                if (!activeRoomId) {
+                    showToast("Please create or join a room first!");
+                    return;
+                }
+                if (turn !== myRole) {
+                    showToast(`It's ${turn}'s turn right now!`);
+                    return;
+                }
+            }
+
+            makeMove(index, turn);
+
+            if (onlineActive && activeRoomId && db) {
+                syncRoomState();
+            }
+        }
+
+        function makeMove(index, player) {
+            boardState[index] = player;
+            playSound('move');
+            renderBoard();
+
+            const winCombo = checkWin(player);
+            if (winCombo) {
+                gameOver = true;
+                highlightWinningCells(winCombo, player);
+                if (player === 'X') scoreX++;
+                else scoreO++;
+                updateScoresUI();
+                setTurnStatus(`${player} Wins! 🎉`, player);
+                playSound('win');
+            } else if (boardState.every(cell => cell !== null)) {
+                gameOver = true;
+                scoreTie++;
+                updateScoresUI();
+                setTurnStatus("It's a Draw! 🤝", 'draw');
+                playSound('tie');
+            } else {
+                turn = turn === 'X' ? 'O' : 'X';
+                updateTurnUI();
+            }
+        }
+
+        function checkWin(player) {
+            for (let combo of winningCombinations) {
+                if (combo.every(index => boardState[index] === player)) {
+                    return combo;
+                }
+            }
+            return null;
+        }
+
+        function renderBoard() {
+            cells.forEach((cell, idx) => {
+                const val = boardState[idx];
+                cell.innerHTML = '';
+                if (val === 'X') {
+                    cell.innerHTML = `<svg class="w-12 h-12 stroke-red-500 stroke-[3] glow-x cell-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+                } else if (val === 'O') {
+                    cell.innerHTML = `<svg class="w-12 h-12 stroke-blue-500 stroke-[3] glow-o cell-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle></svg>`;
+                }
+            });
+        }
+
+        function highlightWinningCells(combo, player) {
+            const bgClass = player === 'X' ? 'bg-red-500/20' : 'bg-blue-500/20';
+            const borderClass = player === 'X' ? 'border-red-500' : 'border-blue-500';
+            combo.forEach(index => {
+                const c = cells[index];
+                c.classList.add(bgClass, borderClass, 'scale-105');
+            });
+        }
+
+        function clearCellHighlights() {
+            cells.forEach(c => {
+                c.className = 'cell bg-slate-950/90 hover:bg-slate-800/70 border border-slate-800/80 rounded-2xl flex items-center justify-center transition-all duration-150 cell-hover focus:outline-none';
+            });
+        }
+
+        function updateTurnUI() {
+            if (gameOver) return;
+            if (turn === 'X') {
+                turnText.innerHTML = `It's <span class="text-red-400 font-extrabold flex items-center gap-1"><i data-lucide="x" class="w-4 h-4"></i> X</span>'s turn`;
+            } else {
+                turnText.innerHTML = `It's <span class="text-blue-400 font-extrabold flex items-center gap-1"><i data-lucide="circle" class="w-4 h-4"></i> O</span>'s turn`;
+            }
+            lucide.createIcons();
+            highlightCurrentPlayerCard();
+        }
+
+        function setTurnStatus(msg, statusType) {
+            if (statusType === 'X') {
+                turnText.innerHTML = `<span class="text-red-400 font-extrabold">${msg}</span>`;
+            } else if (statusType === 'O') {
+                turnText.innerHTML = `<span class="text-blue-400 font-extrabold">${msg}</span>`;
+            } else {
+                turnText.innerHTML = `<span class="text-slate-300 font-bold">${msg}</span>`;
+            }
+            highlightCurrentPlayerCard(statusType);
+        }
+
+        function highlightCurrentPlayerCard(override) {
+            const boxX = document.getElementById('scoreBoxX');
+            const boxO = document.getElementById('scoreBoxO');
+
+            boxX.classList.remove('ring-2', 'ring-red-500', 'bg-slate-800/80');
+            boxO.classList.remove('ring-2', 'ring-blue-500', 'bg-slate-800/80');
+
+            const current = override || turn;
+            if (current === 'X') {
+                boxX.classList.add('ring-2', 'ring-red-500', 'bg-slate-800/80');
+            } else if (current === 'O') {
+                boxO.classList.add('ring-2', 'ring-blue-500', 'bg-slate-800/80');
+            }
+        }
+
+        function updateScoresUI() {
+            document.getElementById('scoreX').textContent = scoreX;
+            document.getElementById('scoreO').textContent = scoreO;
+            document.getElementById('scoreTie').textContent = scoreTie;
+        }
+
+        function resetGame() {
+            boardState = Array(9).fill(null);
+            turn = 'X';
+            gameOver = false;
+            clearCellHighlights();
+            renderBoard();
+            updateTurnUI();
+
+            if (onlineActive && activeRoomId && db) {
+                syncRoomState();
+            }
+        }
+
+        function switchMode(mode) {
+            if (mode === 'local') {
+                onlineActive = false;
+                modeLocalBtn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 bg-indigo-600 text-white shadow-md";
+                modeOnlineBtn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200";
+                onlinePanel.classList.add('hidden');
+                document.getElementById('labelPlayerX').textContent = "Player 1";
+                document.getElementById('labelPlayerO').textContent = "Player 2";
+                if (roomUnsubscribe) { roomUnsubscribe(); roomUnsubscribe = null; }
+                activeRoomId = null;
+                resetGame();
+            } else {
+                onlineActive = true;
+                modeOnlineBtn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 bg-indigo-600 text-white shadow-md";
+                modeLocalBtn.className = "flex-1 py-2.5 px-3 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-2 text-slate-400 hover:text-slate-200";
+                onlinePanel.classList.remove('hidden');
+                resetGame();
+            }
+        }
+
+        function generateRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        async function createRoom() {
+            if (!currentUser || !db) {
+                showToast("Connecting to service... Please wait.");
+                return;
+            }
+            const roomCode = generateRoomCode();
+            myRole = 'X';
+            activeRoomId = roomCode;
+
+            // Strict collection path for public shared data
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode);
+            const initialRoomData = {
+                boardState: Array(9).fill(null),
+                turn: 'X',
+                gameOver: false,
+                hostUid: currentUser.uid,
+                guestUid: null,
+                scoreX: 0,
+                scoreO: 0,
+                scoreTie: 0,
+                createdAt: Date.now()
+            };
+
+            try {
+                await setDoc(roomRef, initialRoomData);
+                currentRoomCodeDisplay.textContent = roomCode;
+                playerRoleStatus.textContent = "You are Player X (Host) • Waiting for Player O...";
+                document.getElementById('labelPlayerX').textContent = "You (X)";
+                document.getElementById('labelPlayerO').textContent = "Opponent (O)";
+                roomStatusInfo.classList.remove('hidden');
+                listenToRoom(roomCode);
+                showToast(`Room ${roomCode} created! Share the link.`);
+            } catch (err) {
+                console.error("Error creating room:", err);
+                showToast("Failed to create room.");
+            }
+        }
+
+        async function joinRoom(code) {
+            if (!code || code.trim().length !== 6) {
+                showToast("Enter a valid 6-character room code");
+                return;
+            }
+            if (!currentUser || !db) {
+                showToast("Connecting to service...");
+                return;
+            }
+
+            const roomCode = code.toUpperCase().trim();
+            activeRoomId = roomCode;
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode);
+
+            listenToRoom(roomCode, true);
+        }
+
+        function listenToRoom(roomCode, isJoining = false) {
+            if (roomUnsubscribe) roomUnsubscribe();
+
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomCode);
+            
+            roomUnsubscribe = onSnapshot(roomRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    showToast("Room does not exist!");
+                    return;
+                }
+
+                const data = snapshot.data();
+
+                // Assign Guest Role if joining
+                if (isJoining && data.hostUid !== currentUser.uid && !data.guestUid) {
+                    myRole = 'O';
+                    updateDoc(roomRef, { guestUid: currentUser.uid });
+                } else if (data.hostUid === currentUser.uid) {
+                    myRole = 'X';
+                } else if (data.guestUid === currentUser.uid) {
+                    myRole = 'O';
+                }
+
+                // Update Player Status
+                currentRoomCodeDisplay.textContent = roomCode;
+                roomStatusInfo.classList.remove('hidden');
+
+                if (myRole === 'X') {
+                    document.getElementById('labelPlayerX').textContent = "You (X)";
+                    document.getElementById('labelPlayerO').textContent = data.guestUid ? "Opponent (O)" : "Waiting...";
+                    playerRoleStatus.textContent = data.guestUid ? "You are X • Opponent Connected" : "You are X • Waiting for Player O...";
+                } else {
+                    document.getElementById('labelPlayerX').textContent = "Opponent (X)";
+                    document.getElementById('labelPlayerO').textContent = "You (O)";
+                    playerRoleStatus.textContent = "You are O • Connected to Room";
+                }
+
+                // Sync board state from database
+                boardState = data.boardState || Array(9).fill(null);
+                turn = data.turn || 'X';
+                gameOver = data.gameOver || false;
+                scoreX = data.scoreX || 0;
+                scoreO = data.scoreO || 0;
+                scoreTie = data.scoreTie || 0;
+
+                renderBoard();
+                updateScoresUI();
+
+                const winCombo = checkWin('X') || checkWin('O');
+                if (winCombo) {
+                    const winner = boardState[winCombo[0]];
+                    highlightWinningCells(winCombo, winner);
+                    setTurnStatus(`${winner} Wins! 🎉`, winner);
+                } else if (gameOver && boardState.every(c => c !== null)) {
+                    setTurnStatus("It's a Draw! 🤝", 'draw');
+                } else {
+                    clearCellHighlights();
+                    updateTurnUI();
+                }
+
+            }, (err) => {
+                console.error("Room sync error:", err);
+            });
+        }
+
+        async function syncRoomState() {
+            if (!onlineActive || !activeRoomId || !db) return;
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', activeRoomId);
+            try {
+                await updateDoc(roomRef, {
+                    boardState: boardState,
+                    turn: turn,
+                    gameOver: gameOver,
+                    scoreX: scoreX,
+                    scoreO: scoreO,
+                    scoreTie: scoreTie
+                });
+            } catch (err) {
+                console.error("Sync error:", err);
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+
+        // Copy Share Link to Clipboard
+        copyShareLinkBtn.addEventListener('click', () => {
+            if (!activeRoomId) return;
+            const shareUrl = `${window.location.origin}${window.location.pathname}?room=${activeRoomId}`;
+            
+            // Clipboard fallback
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shareUrl);
+            } else {
+                const input = document.createElement('input');
+                input.value = shareUrl;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+            }
+            showToast("Share link copied to clipboard!");
+        });
+
+        // Event Listeners for UI buttons
+        modeLocalBtn.addEventListener('click', () => switchMode('local'));
+        modeOnlineBtn.addEventListener('click', () => switchMode('online'));
+        createRoomBtn.addEventListener('click', createRoom);
+        joinRoomBtn.addEventListener('click', () => joinRoom(roomCodeInput.value));
+        restartBtn.addEventListener('click', resetGame);
+        
+        resetScoreBtn.addEventListener('click', () => {
+            scoreX = 0;
+            scoreO = 0;
+            scoreTie = 0;
+            updateScoresUI();
+            resetGame();
+            showToast("Scores reset");
+        });
+
+        soundToggleBtn.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            soundToggleBtn.innerHTML = soundEnabled 
+                ? `<i data-lucide="volume-2" class="w-5 h-5"></i>`
+                : `<i data-lucide="volume-x" class="w-5 h-5 text-red-400"></i>`;
+            lucide.createIcons();
+            showToast(soundEnabled ? "Sound Effects ON" : "Sound Effects OFF");
+        });
+
+        // Initial setup
+        highlightCurrentPlayerCard();
+    </script>
+</body>
+</html>
